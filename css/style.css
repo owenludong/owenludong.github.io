@@ -474,8 +474,8 @@ a:visited {
   float: left;
 }
 #sub-nav #profile-nav .avatar {
-  width: 40px;
   height: 40px;
+  width: auto;
   margin-right: 8px;
 }
 #sub-nav #profile-nav .fa {
@@ -616,8 +616,8 @@ a:visited {
 #profile .inner .base-info #avatar {
   display: block;
   margin: 10px auto 20px;
-  width: 128px;
   height: 128px;
+  width: auto;
 }
 #profile .inner .base-info #name,
 #profile .inner .base-info #title,

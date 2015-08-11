@@ -3,10 +3,10 @@
   
   <title><![CDATA[from a get set world]]></title>
   
-  <link href="/hexo-theme-icarus/atom.xml" rel="self"/>
-  <link href="www.getsetter.cn/hexo-theme-icarus//"/>
+  <link href="/atom.xml" rel="self"/>
+  <link href="www.getsetter.cn//"/>
   <updated>2015-01-22T14:47:28.000Z</updated>
-  <id>www.getsetter.cn/hexo-theme-icarus//</id>
+  <id>www.getsetter.cn//</id>
   
   <author>
     <name><![CDATA[家栋]]></name>
@@ -17,8 +17,8 @@
   
   <entry>
     <title><![CDATA[参加阿里巴巴2015阿里系统技术峰会的感受]]></title>
-    <link href="www.getsetter.cn/hexo-theme-icarus/2014/08/01/share_ali_tec_metting/"/>
-    <id>www.getsetter.cn/hexo-theme-icarus/2014/08/01/share_ali_tec_metting/</id>
+    <link href="www.getsetter.cn/2014/08/01/share_ali_tec_metting/"/>
+    <id>www.getsetter.cn/2014/08/01/share_ali_tec_metting/</id>
     <published>2014-08-01T15:25:17.000Z</published>
     <updated>2015-01-22T14:47:28.000Z</updated>
     <content type="html"><![CDATA[<p>阿里系统技术峰会是由阿里巴巴举办的一次围绕运维层面的一次技术交流。上午的topic因为没啥吸引力就选择了下午场。</p>
@@ -50,8 +50,8 @@
   
   <entry>
     <title><![CDATA[tomcat初始化servlet代码剖析]]></title>
-    <link href="www.getsetter.cn/hexo-theme-icarus/2014/08/01/servlet_init/"/>
-    <id>www.getsetter.cn/hexo-theme-icarus/2014/08/01/servlet_init/</id>
+    <link href="www.getsetter.cn/2014/08/01/servlet_init/"/>
+    <id>www.getsetter.cn/2014/08/01/servlet_init/</id>
     <published>2014-08-01T15:25:17.000Z</published>
     <updated>2014-08-01T09:13:00.000Z</updated>
     <content type="html"><![CDATA[<p>先抛几个老生常谈的面试问题</p>
@@ -307,8 +307,8 @@ return servlet;
   
   <entry>
     <title><![CDATA[tomcat之http解析和keepalive(bio篇)]]></title>
-    <link href="www.getsetter.cn/hexo-theme-icarus/2014/07/22/tomcat_http_parse/"/>
-    <id>www.getsetter.cn/hexo-theme-icarus/2014/07/22/tomcat_http_parse/</id>
+    <link href="www.getsetter.cn/2014/07/22/tomcat_http_parse/"/>
+    <id>www.getsetter.cn/2014/07/22/tomcat_http_parse/</id>
     <published>2014-07-22T15:18:42.000Z</published>
     <updated>2014-07-23T01:38:14.000Z</updated>
     <content type="html"><![CDATA[<p>##前言<br>基本上所有的工程师都需要和web、浏览器打交道，对编写servlet也是非常地熟练，而中间的容器层往往是大家比较缺乏的知识，如果你对tomcat如何解析http请求，keepalive等功能感兴趣请往下看。</p>
@@ -378,8 +378,8 @@ getExecutor<span class="params">()</span>.execute<span class="params">(new Socke
   
   <entry>
     <title><![CDATA[tomcat comet的处理过程]]></title>
-    <link href="www.getsetter.cn/hexo-theme-icarus/2014/07/18/tomcat_comet/"/>
-    <id>www.getsetter.cn/hexo-theme-icarus/2014/07/18/tomcat_comet/</id>
+    <link href="www.getsetter.cn/2014/07/18/tomcat_comet/"/>
+    <id>www.getsetter.cn/2014/07/18/tomcat_comet/</id>
     <published>2014-07-18T14:59:03.000Z</published>
     <updated>2014-07-18T10:15:48.000Z</updated>
     <content type="html"><![CDATA[<p>#前言#<br>comet是一种服务端反推消息给客户端的一种技术，比如聊天室、电子邮件的场景。在comet出现之前有很多方案，更早之前想实现数据的不断更新，就要不断的通过js来不断地重新装载页面来获取新数据，后来AJAX的出现，可以实现局部刷新的功能,但是AJAX的方式也有局限性，因为他必须通过轮询来调后台接口，这样轮询的周期怎么来把控，如果设置地太长，获取的信息可能有滞后；如果设置地太短，客户端和服务端都会消耗很多不必要TCP连接开销。<br><br>而本文讨论的comet技术的实现原理：不关闭response的连接，当有数据更新不断地通过这个连接往客户端push数据。而客户端用ajax的方式检查readyState 的值是否为3，然后获取response回来的数据。</p>
@@ -648,8 +648,8 @@ getExecutor<span class="params">()</span>.execute<span class="params">(new Socke
   
   <entry>
     <title><![CDATA[netty5 用户指南]]></title>
-    <link href="www.getsetter.cn/hexo-theme-icarus/2014/07/15/netty5/"/>
-    <id>www.getsetter.cn/hexo-theme-icarus/2014/07/15/netty5/</id>
+    <link href="www.getsetter.cn/2014/07/15/netty5/"/>
+    <id>www.getsetter.cn/2014/07/15/netty5/</id>
     <published>2014-07-15T11:17:03.000Z</published>
     <updated>2014-07-16T14:43:06.000Z</updated>
     <content type="html"><![CDATA[<h2 id="前言">前言</h2><h3 id="问题">问题</h3><p>现如今我们使用通用的应用程序或者类库来实现系统之间地互相访问，比如我们经常使用一个HTTP客户端来从web服务器上获取信息，或者通过web service来执行一个远程的调用。</p>
@@ -1111,8 +1111,8 @@ public <span class="class"><span class="keyword">class</span> <span class="title
   
   <entry>
     <title><![CDATA[tomcat组件]]></title>
-    <link href="www.getsetter.cn/hexo-theme-icarus/2014/06/25/tomcat-component/"/>
-    <id>www.getsetter.cn/hexo-theme-icarus/2014/06/25/tomcat-component/</id>
+    <link href="www.getsetter.cn/2014/06/25/tomcat-component/"/>
+    <id>www.getsetter.cn/2014/06/25/tomcat-component/</id>
     <published>2014-06-25T02:00:00.000Z</published>
     <updated>2014-06-25T02:01:58.000Z</updated>
     <content type="html"><![CDATA[<p>tomcat有一个核心配置文件叫做server.xml,这里声明了tomcat所有的运行组件，所以我们要了解tomcat组件就从这个配置文件开始，这个XML文件的解析工作则是交给了apache内部的一个xml生成java对象的工具叫<strong>Digester</strong>，apache软件基金会中的绝大多数项目也都是采用这个工具来解析xml的，比如struts。具体用法参考上一节的地址。</p>
@@ -1272,8 +1272,8 @@ public void _setExecutor<span class="params">(Connector con, Executor ex)</span>
   
   <entry>
     <title><![CDATA[Tomcat理性认识篇]]></title>
-    <link href="www.getsetter.cn/hexo-theme-icarus/2014/06/05/tomcat-begin/"/>
-    <id>www.getsetter.cn/hexo-theme-icarus/2014/06/05/tomcat-begin/</id>
+    <link href="www.getsetter.cn/2014/06/05/tomcat-begin/"/>
+    <id>www.getsetter.cn/2014/06/05/tomcat-begin/</id>
     <published>2014-06-04T16:00:00.000Z</published>
     <updated>2014-06-23T08:31:08.000Z</updated>
     <content type="html"><![CDATA[<p>在GreenTea JUG的一次线下分享聚会上，听了王宏江分享的关于tomcat的原理和淘宝的tomcat定制的话题，对tomcat的实现产生了浓厚的兴趣。<br>现在整个国内估计也就阿里巴巴有这个实力和需求需要对容器做定制，原因是阿里巴巴有全亚洲(硅谷那边不清楚)最多的Java从业者和系统。由于tomcat是基于号称对商业最友好的<a href="http://www.apache.org/licenses" target="_blank" rel="external">Apache license 2.0</a>的协议，所以在必要的时候做二次修改并可以商用或者free。</p>
