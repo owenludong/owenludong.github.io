@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>tomcat初始化servlet代码剖析 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="先抛几个老生常谈的面试问题
+
+servlet是在容器启动的时候初始化还是第一次调用的时候初始化？
+web.xml中的loadOnstartup用什么用，是指启动延迟时间？
+servlet初始化怎么控制并发的？
+
+本来主要来读下tomcat源码，知道下tomcat是怎么来处理上面的问题的
+servlet初始化时机tomcat是以组件的方式架构整个容器，并且每个组件都会有生命周期，贯穿着tomcat的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="tomcat初始化servlet代码剖析">
+<meta property="og:url" content="http://yoursite.com/2014/08/01/servlet_init/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="先抛几个老生常谈的面试问题
+
+servlet是在容器启动的时候初始化还是第一次调用的时候初始化？
+web.xml中的loadOnstartup用什么用，是指启动延迟时间？
+servlet初始化怎么控制并发的？
+
+本来主要来读下tomcat源码，知道下tomcat是怎么来处理上面的问题的
+servlet初始化时机tomcat是以组件的方式架构整个容器，并且每个组件都会有生命周期，贯穿着tomcat的">
+<meta property="og:updated_time" content="2014-08-01T09:13:00.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="tomcat初始化servlet代码剖析">
+<meta name="twitter:description" content="先抛几个老生常谈的面试问题
+
+servlet是在容器启动的时候初始化还是第一次调用的时候初始化？
+web.xml中的loadOnstartup用什么用，是指启动延迟时间？
+servlet初始化怎么控制并发的？
+
+本来主要来读下tomcat源码，知道下tomcat是怎么来处理上面的问题的
+servlet初始化时机tomcat是以组件的方式架构整个容器，并且每个组件都会有生命周期，贯穿着tomcat的">
+  
+    <link rel="alternative" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" type="text/css">
+  
+
+</head>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://yoursite.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-servlet_init" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2014/08/01/servlet_init/" class="article-date">
+  <time datetime="2014-08-01T15:25:17.000Z" itemprop="datePublished">2014-08-01</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      tomcat初始化servlet代码剖析
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>先抛几个老生常谈的面试问题</p>
+<ul>
+<li>servlet是在容器启动的时候初始化还是第一次调用的时候初始化？</li>
+<li>web.xml中的loadOnstartup用什么用，是指启动延迟时间？</li>
+<li>servlet初始化怎么控制并发的？</li>
+</ul>
+<p>本来主要来读下tomcat源码，知道下tomcat是怎么来处理上面的问题的</p>
+<h2 id="servlet初始化时机">servlet初始化时机</h2><p>tomcat是以组件的方式架构整个容器，并且每个组件都会有生命周期，贯穿着tomcat的生老病死。如果对tomcat组件不清楚可以参考我之前写过的一篇<a href="http://www.getsetter.cn/2014/06/25/tomcat-component/" target="_blank" rel="external">tomcat组件</a></p>
+<p>tomcat启动的时候，会去调每个组件的start方法，这里我们关注一下Context组件的启动方法。每一个web应用在tomcat内部都是以Context形式存在的，当我们在CATALINA_BASE/webapps下创建一个web应用时，默认都会创建一个名字为目录名的Context实例。</p>
+<p>Context在tomcat容器内部的的实现类是StandardContext，StandardContext启动函数里面有一个loadOnStartup()方法，看一下这个方法</p>
+<pre><code><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">loadOnStartup</span><span class="params">(Container children[])</span> </span>{
+
+    <span class="comment">// Collect "load on startup" servlets that need to be initialized</span>
+    TreeMap&lt;Integer, ArrayList&lt;Wrapper&gt;&gt; <span class="built_in">map</span> =
+        <span class="keyword">new</span> TreeMap&lt;Integer, ArrayList&lt;Wrapper&gt;&gt;();
+    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; children.length; i++) {
+        Wrapper wrapper = (Wrapper) children[i];
+        <span class="comment">//@1</span>
+        <span class="keyword">int</span> loadOnStartup = wrapper.getLoadOnStartup();
+        <span class="keyword">if</span> (loadOnStartup &lt; <span class="number">0</span>)
+            <span class="keyword">continue</span>;
+        Integer key = Integer.valueOf(loadOnStartup);
+        ArrayList&lt;Wrapper&gt; <span class="built_in">list</span> = <span class="built_in">map</span>.get(key);
+        <span class="keyword">if</span> (<span class="built_in">list</span> == null) {
+            <span class="built_in">list</span> = <span class="keyword">new</span> ArrayList&lt;Wrapper&gt;();
+            <span class="built_in">map</span>.put(key, <span class="built_in">list</span>);
+        }
+        <span class="built_in">list</span>.add(wrapper);
+    }
+
+    <span class="comment">// Load the collected "load on startup" servlets</span>
+    <span class="keyword">for</span> (ArrayList&lt;Wrapper&gt; <span class="built_in">list</span> : <span class="built_in">map</span>.values()) {
+        <span class="keyword">for</span> (Wrapper wrapper : <span class="built_in">list</span>) {
+            <span class="keyword">try</span> {
+                wrapper.load();
+            } <span class="keyword">catch</span> (ServletException e) {
+                getLogger().error(sm.getString(<span class="string">"standardWrapper.loadException"</span>,
+                                  getName()), StandardWrapper.getRootCause(e));
+                <span class="comment">// <span class="doctag">NOTE:</span> load errors (including a servlet that throws</span>
+                <span class="comment">// UnavailableException from tht init() method) are NOT</span>
+                <span class="comment">// fatal to application startup</span>
+            }
+        }
+    }
+
+}
+</code></pre><ul>
+<li>方法参数可以理解为多个servlet配置</li>
+<li>标注@1处拿到了每个servlet的load-on-starup配置的值，如果值大于0，则会把这个值当key，ArrayList<wrapper>为value放到一个TreeMap,注意TreeMap是一个可以排序的集合，这里key是Integer，那每一次put，就会把key值越小的排在前面。 之后会遍历这个map，调用wrapper的load方法，load()方法会去初始化servlet。</wrapper></li>
+</ul>
+<p>上面的代码其实回答了最开始的2个疑问，load-on-startup的作用和servlet的初始化时机。容器会根据load-on-startup的配置来启动servlet的优先级，值如果小于0，则不会在容器启动的时候初始化，值越小，就优先加载。</p>
+<h2 id="servlet初始化过程">servlet初始化过程</h2><h3 id="SingleThreadModel">SingleThreadModel</h3><p>在分析servlet初始化过程前，先聊聊SingleThreadModel接口，可能很多21世纪的工程师都不知道这个接口，在servlet2.4之前的规范，为了防止并发访问servlet带来的问题，servlet规范规定所有实现SingleThreadModel接口的servlet，会为每一次request实例化一个servlet。在tomcat实现里，会有一个servlet实例计数器，不能超过一个阀值，实现后面会分析。但其实这对大流量的应用无疑是一个灾难,所以这个接口现在已经被作废。</p>
+<h3 id="分析servlet的实例化过程">分析servlet的实例化过程</h3><p>前面提到wrapper.load()会去是实例化servlet,这个方法其实就是去调用了loadservlet()方法，我们分析下这个方法</p>
+<pre><code><span class="keyword">if</span> <span class="params">(!singleThreadModel &amp;&amp; <span class="params">(instance != null)</span>)</span>
+    return instance;
+
+PrintStream out = System.out;
+<span class="keyword">if</span> <span class="params">(swallowOutput)</span> {
+    SystemLogHandler.startCapture<span class="params">()</span>;
+}
+
+Servlet servlet;
+try {
+    long t1=System.currentTimeMillis<span class="params">()</span>;
+    <span class="comment">// Complain if no servlet class has been specified</span>
+    <span class="keyword">if</span> <span class="params">(servletClass == null)</span> {
+        unavailable<span class="params">(null)</span>;
+        throw new ServletException
+            <span class="params">(sm.getString<span class="params">(<span class="string">"standardWrapper.notClass"</span>, getName<span class="params">()</span>)</span>)</span>;
+    }
+
+    InstanceManager instanceManager = <span class="params">(<span class="params">(StandardContext)</span>getParent<span class="params">()</span>)</span>.getInstanceManager<span class="params">()</span>;
+    try {
+        servlet = <span class="params">(Servlet)</span> instanceManager.newInstance<span class="params">(servletClass)</span>;
+    } catch <span class="params">(ClassCastException e)</span> {
+        unavailable<span class="params">(null)</span>;
+        <span class="comment">// Restore the context ClassLoader</span>
+        throw new ServletException
+            <span class="params">(sm.getString<span class="params">(<span class="string">"standardWrapper.notServlet"</span>, servletClass)</span>, e)</span>;
+    } catch <span class="params">(Throwable e)</span> {
+        e = ExceptionUtils.unwrapInvocationTargetException<span class="params">(e)</span>;
+        ExceptionUtils.handleThrowable<span class="params">(e)</span>;
+        unavailable<span class="params">(null)</span>;
+
+        <span class="comment">// Added extra log statement for Bugzilla 36630:</span>
+        <span class="comment">// http://issues.apache.org/bugzilla/show_bug.cgi?id=36630</span>
+        <span class="keyword">if</span><span class="params">(log.isDebugEnabled<span class="params">()</span>)</span> {
+            <span class="built_in">log</span>.debug<span class="params">(sm.getString<span class="params">(<span class="string">"standardWrapper.instantiate"</span>, servletClass)</span>, e)</span>;
+        }
+
+        <span class="comment">// Restore the context ClassLoader</span>
+        throw new ServletException
+            <span class="params">(sm.getString<span class="params">(<span class="string">"standardWrapper.instantiate"</span>, servletClass)</span>, e)</span>;
+    }
+
+    <span class="keyword">if</span> <span class="params">(multipartConfigElement == null)</span> {
+        MultipartConfig annotation =
+                servlet.getClass<span class="params">()</span>.getAnnotation<span class="params">(MultipartConfig.class)</span>;
+        <span class="keyword">if</span> <span class="params">(annotation != null)</span> {
+            multipartConfigElement =
+                    new MultipartConfigElement<span class="params">(annotation)</span>;
+        }
+    }
+
+    processServletSecurityAnnotation<span class="params">(servlet.getClass<span class="params">()</span>)</span>;
+
+    <span class="comment">// Special handling for ContainerServlet instances</span>
+    <span class="keyword">if</span> <span class="params">(<span class="params">(servlet instanceof ContainerServlet)</span> &amp;&amp;
+            <span class="params">(isContainerProvidedServlet<span class="params">(servletClass)</span> ||
+                    <span class="params">(<span class="params">(Context)</span> getParent<span class="params">()</span>)</span>.getPrivileged<span class="params">()</span> )</span>)</span> {
+        <span class="params">(<span class="params">(ContainerServlet)</span> servlet)</span>.setWrapper<span class="params">(this)</span>;
+    }
+
+    classLoadTime=<span class="params">(int)</span> <span class="params">(System.currentTimeMillis<span class="params">()</span> -t1)</span>;
+
+    <span class="keyword">if</span> <span class="params">(servlet instanceof SingleThreadModel)</span> {
+        <span class="keyword">if</span> <span class="params">(instancePool == null)</span> {
+            instancePool = new Stack&lt;Servlet&gt;<span class="params">()</span>;
+        }
+        singleThreadModel = <span class="literal">true</span>;
+    }
+
+    initServlet<span class="params">(servlet)</span>;
+
+    fireContainerEvent<span class="params">(<span class="string">"load"</span>, this)</span>;
+
+    loadTime=System.currentTimeMillis<span class="params">()</span> -t1;
+} finally {
+    <span class="keyword">if</span> <span class="params">(swallowOutput)</span> {
+        String <span class="built_in">log</span> = SystemLogHandler.stopCapture<span class="params">()</span>;
+        <span class="keyword">if</span> <span class="params">(log != null &amp;&amp; log.length<span class="params">()</span> &gt; <span class="number">0</span>)</span> {
+            <span class="keyword">if</span> <span class="params">(getServletContext<span class="params">()</span> != null)</span> {
+                getServletContext<span class="params">()</span>.<span class="built_in">log</span><span class="params">(log)</span>;
+            } <span class="keyword">else</span> {
+                out.println<span class="params">(log)</span>;
+            }
+        }
+    }
+}
+return servlet;
+</code></pre><ul>
+<li>代码不难，围绕本章话题主要实现了几点：反射实例化了一个servlet对象,判断servlet是否实现SingleThreadModel接口，调用servlet的init方法。</li>
+</ul>
+<p>wrapper.load()只是在容器启动的时候去初始化，是个单线程的操作，所以并不会有并发的问题。我们来关注下StandardWrapper.allocate()方法，这个方法会在每次请求servlet的时候初始化servlet，即servlet不是容器启动的时候初始化，这里方法比较长，分2部分分析，第一部分：</p>
+<pre><code><span class="keyword">if</span> <span class="params">(!singleThreadModel)</span> {
+
+       <span class="comment">// @1</span>
+       <span class="keyword">if</span> <span class="params">(instance == null)</span> {
+           synchronized <span class="params">(this)</span> {
+               <span class="keyword">if</span> <span class="params">(instance == null)</span> {
+                   try {
+                       <span class="keyword">if</span> <span class="params">(log.isDebugEnabled<span class="params">()</span>)</span>
+                           <span class="built_in">log</span>.debug<span class="params">(<span class="string">"Allocating non-STM instance"</span>)</span>;
+
+                       instance = loadServlet<span class="params">()</span>;
+                       <span class="keyword">if</span> <span class="params">(!singleThreadModel)</span> {
+                           <span class="comment">// For non-STM, increment here to prevent a race</span>
+                           <span class="comment">// condition with unload. Bug 43683, test case</span>
+                           <span class="comment">// #3</span>
+                           newInstance = <span class="literal">true</span>;
+                           countAllocated.incrementAndGet<span class="params">()</span>;
+                       }
+                   } catch <span class="params">(ServletException e)</span> {
+                       throw e;
+                   } catch <span class="params">(Throwable e)</span> {
+                       ExceptionUtils.handleThrowable<span class="params">(e)</span>;
+                       throw new ServletException
+                           <span class="params">(sm.getString<span class="params">(<span class="string">"standardWrapper.allocate"</span>)</span>, e)</span>;
+                   }
+               }
+           }
+       }
+
+       <span class="keyword">if</span> <span class="params">(!instanceInitialized)</span> {
+           initServlet<span class="params">(instance)</span>;
+       }
+
+       <span class="comment">//@2</span>
+       <span class="keyword">if</span> <span class="params">(singleThreadModel)</span> {
+           <span class="keyword">if</span> <span class="params">(newInstance)</span> {
+               <span class="comment">// Have to do this outside of the sync above to prevent a</span>
+               <span class="comment">// possible deadlock</span>
+               synchronized <span class="params">(instancePool)</span> {
+                   instancePool.push<span class="params">(instance)</span>;
+                   nInstances++;
+               }
+           }
+       } <span class="keyword">else</span> {
+           <span class="keyword">if</span> <span class="params">(log.isTraceEnabled<span class="params">()</span>)</span>
+               <span class="built_in">log</span>.trace<span class="params">(<span class="string">"  Returning non-STM instance"</span>)</span>;
+           <span class="comment">// For new instances, count will have been incremented at the</span>
+           <span class="comment">// time of creation</span>
+           <span class="keyword">if</span> <span class="params">(!newInstance)</span> {
+               countAllocated.incrementAndGet<span class="params">()</span>;
+           }
+           return <span class="params">(instance)</span>;
+       }
+   }
+</code></pre><ul>
+<li>@1用到了双检查锁，确保不会产生并发问题，并且在同步块里也是调用了之前看过的loadServlet方法</li>
+<li>@2的是对singleThreadModel做处理，把对同一个servlet的不同实例放到了Stack集合里</li>
+</ul>
+<p>第二部分也是针对singleThreadModel做处理:</p>
+<pre><code>synchronized <span class="params">(instancePool)</span> {
+
+     while <span class="params">(countAllocated.get<span class="params">()</span> &gt;= nInstances)</span> {
+         <span class="comment">// Allocate a new instance if possible, or else wait</span>
+         <span class="keyword">if</span> <span class="params">(nInstances &lt; maxInstances)</span> {
+             try {
+                 instancePool.push<span class="params">(loadServlet<span class="params">()</span>)</span>;
+                 nInstances++;
+             } catch <span class="params">(ServletException e)</span> {
+                 throw e;
+             } catch <span class="params">(Throwable e)</span> {
+                 ExceptionUtils.handleThrowable<span class="params">(e)</span>;
+                 throw new ServletException
+                     <span class="params">(sm.getString<span class="params">(<span class="string">"standardWrapper.allocate"</span>)</span>, e)</span>;
+             }
+         } <span class="keyword">else</span> {
+             try {
+                 instancePool.wait<span class="params">()</span>;
+             } catch <span class="params">(InterruptedException e)</span> {
+                 <span class="comment">// Ignore</span>
+             }
+         }
+     }
+     <span class="keyword">if</span> <span class="params">(log.isTraceEnabled<span class="params">()</span>)</span>
+         <span class="built_in">log</span>.trace<span class="params">(<span class="string">"  Returning allocated STM instance"</span>)</span>;
+     countAllocated.incrementAndGet<span class="params">()</span>;
+     return instancePool.pop<span class="params">()</span>;
+
+ }
+</code></pre><ul>
+<li>如果栈中的个数小于最大允许的阀值，就往stack中push实例化好的servlet,否则会对stack做一个阻塞操作,等有请求完毕后会调用notify方法唤醒stack变量</li>
+</ul>
+<h2 id="总结">总结</h2><ul>
+<li>servlet的初始化会根据servlet配置的load-on-startup做出不同的初始化响应，如果值大于等于0，则会在容器启动时初始servlet,否则会在第一次调用的时候初始化</li>
+<li>web.xml中的loadOnstartup是用来控制servlet的初始化顺序，同时控制了servlet是否在容器启动的时候初始化？</li>
+<li>servlet初始化并发主要是通过synchronized同步块+双检查锁的机制。</li>
+</ul>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2014/08/01/servlet_init/" data-id="cid748ogt0008gixeikm31lk7" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2014/08/01/share_ali_tec_metting/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          参加阿里巴巴2015阿里系统技术峰会的感受
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2014/07/22/tomcat_http_parse/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">tomcat之http解析和keepalive(bio篇)</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  
+    
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/08/">August 2014</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/07/">July 2014</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/06/">June 2014</a><span class="archive-list-count">2</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recents</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2015/08/11/hello-world/">Hello World</a>
+          </li>
+        
+          <li>
+            <a href="/2014/08/01/share_ali_tec_metting/">参加阿里巴巴2015阿里系统技术峰会的感受</a>
+          </li>
+        
+          <li>
+            <a href="/2014/08/01/servlet_init/">tomcat初始化servlet代码剖析</a>
+          </li>
+        
+          <li>
+            <a href="/2014/07/22/tomcat_http_parse/">tomcat之http解析和keepalive(bio篇)</a>
+          </li>
+        
+          <li>
+            <a href="/2014/07/18/tomcat_comet/">tomcat comet的处理过程</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2015 John Doe<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css" type="text/css">
+  <script src="/fancybox/jquery.fancybox.pack.js" type="text/javascript"></script>
+
+
+<script src="/js/script.js" type="text/javascript"></script>
+
+  </div>
+</body>
+</html>

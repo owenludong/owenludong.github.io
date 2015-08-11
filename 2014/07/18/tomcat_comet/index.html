@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>tomcat comet的处理过程 | Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="#前言#comet是一种服务端反推消息给客户端的一种技术，比如聊天室、电子邮件的场景。在comet出现之前有很多方案，更早之前想实现数据的不断更新，就要不断的通过js来不断地重新装载页面来获取新数据，后来AJAX的出现，可以实现局部刷新的功能,但是AJAX的方式也有局限性，因为他必须通过轮询来调后台接口，这样轮询的周期怎么来把控，如果设置地太长，获取的信息可能有滞后；如果设置地太短，客户端和服务端">
+<meta property="og:type" content="article">
+<meta property="og:title" content="tomcat comet的处理过程">
+<meta property="og:url" content="http://yoursite.com/2014/07/18/tomcat_comet/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="#前言#comet是一种服务端反推消息给客户端的一种技术，比如聊天室、电子邮件的场景。在comet出现之前有很多方案，更早之前想实现数据的不断更新，就要不断的通过js来不断地重新装载页面来获取新数据，后来AJAX的出现，可以实现局部刷新的功能,但是AJAX的方式也有局限性，因为他必须通过轮询来调后台接口，这样轮询的周期怎么来把控，如果设置地太长，获取的信息可能有滞后；如果设置地太短，客户端和服务端">
+<meta property="og:image" content="http://www.getsetter.cn/img/comet_class.jpg">
+<meta property="og:image" content="http://www.getsetter.cn/img/tomcat_process.jpg">
+<meta property="og:updated_time" content="2014-07-18T10:15:48.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="tomcat comet的处理过程">
+<meta name="twitter:description" content="#前言#comet是一种服务端反推消息给客户端的一种技术，比如聊天室、电子邮件的场景。在comet出现之前有很多方案，更早之前想实现数据的不断更新，就要不断的通过js来不断地重新装载页面来获取新数据，后来AJAX的出现，可以实现局部刷新的功能,但是AJAX的方式也有局限性，因为他必须通过轮询来调后台接口，这样轮询的周期怎么来把控，如果设置地太长，获取的信息可能有滞后；如果设置地太短，客户端和服务端">
+  
+    <link rel="alternative" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" type="text/css">
+  
+
+</head>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://yoursite.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-tomcat_comet" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2014/07/18/tomcat_comet/" class="article-date">
+  <time datetime="2014-07-18T14:59:03.000Z" itemprop="datePublished">2014-07-18</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      tomcat comet的处理过程
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>#前言#<br>comet是一种服务端反推消息给客户端的一种技术，比如聊天室、电子邮件的场景。在comet出现之前有很多方案，更早之前想实现数据的不断更新，就要不断的通过js来不断地重新装载页面来获取新数据，后来AJAX的出现，可以实现局部刷新的功能,但是AJAX的方式也有局限性，因为他必须通过轮询来调后台接口，这样轮询的周期怎么来把控，如果设置地太长，获取的信息可能有滞后；如果设置地太短，客户端和服务端都会消耗很多不必要TCP连接开销。<br><br>而本文讨论的comet技术的实现原理：不关闭response的连接，当有数据更新不断地通过这个连接往客户端push数据。而客户端用ajax的方式检查readyState 的值是否为3，然后获取response回来的数据。</p>
+<p>##tomcat的实现<br>tomcat自带了一个CometProcessor接口，这个接口继承了Servlet接口。所以如果你想实现comet，就让你的servlet实现CometProcessor接口。CometProcessor只有一个方法</p>
+<pre><code><span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">event</span><span class="params">(CometEvent event)</span>
+        <span class="keyword">throws</span> IOException, ServletException</span>;
+</code></pre><p>###先了解下comet相关的类</p>
+<p>上面知道所有的servelt都要实现cometProcessor类，这个类只有一个event方法，参数是CometEvent，看一下下图的类结构</p>
+<p> <img src="http://www.getsetter.cn/img/comet_class.jpg" alt="comet_class.jpg"></p>
+<ol>
+<li>CometEvent内部维护了一个枚举类型的事件状态eventType，这里有4种事件类型:<ul>
+<li>BEGIN: 当连接开始时</li>
+<li>READ: 每次新数据可用时</li>
+<li>END： 连接结束</li>
+<li>ERROR：流程抛异常或者出错，这个状态还有几个子事件类型subEventType,有的时候为了更准确地记录下出错的原因，分离出子状态是有必要的。</li>
+</ul>
+</li>
+<li>用户需要根据这4种不同的类型做不同的业务逻辑处理，所有event可能会有大量的if else语句。</li>
+</ol>
+<p>###回顾tomcat处理的流程<br>从tomcat的功能划分可以把tomcat分为连接器和容器2部分，这里不做过多分析，只说一个大概的流程：从客户端一个http请求开始，客户端会把消息发送到Connector监听的socket端口上，tomcat自己实现了一个http协议栈用来解析http消息(这里也可以单独写一篇文章)，解析出来的数据会封装成tomcat内部的request和response对象,从解析出来的request数据中提取engine、host、context、wrapper等信息，最终通过pipline模式找到对应的servlet(在tomcat内部一个wrapper对象就是对应了一个servlet运行信息)，调用service()方法完成一次请求。</p>
+<p>先暂时忽略Connector的处理部分，这里重点关注下从拿到tomcat解析完数据并生成tomcat内部的request后开始。<br>tomcat拿到请求数据后，会交给tomcat的容器部分，tomcat的容器会由4个组件构成，Engine、Host、Context和Wrapper,组件的具体含义请参考我之前写过的一篇<a href="http://www.getsetter.cn/2014/06/25/tomcat-component/" target="_blank" rel="external">tomcat组件</a>。这4个组件其实并不是平行的，而是父子关系，这几个对象最终都会继承自Container对象，每一个Container对象都会有一个pipline，pipline我们太熟悉了，那valve在哪里定义，每一个容器默认都会在构造函数里都会自带一个valve,比如wrapper构造函数的定义是下面代码所示：</p>
+<pre><code> public <span class="type">StandardWrapper</span><span class="literal">()</span> {        
+         super<span class="literal">()</span>;
+         swValve=<span class="keyword">new</span> <span class="type">StandardWrapperValve</span><span class="literal">()</span>;
+         pipeline.setBasic(swValve);
+         broadcaster = <span class="keyword">new</span> <span class="type">NotificationBroadcasterSupport</span><span class="literal">()</span>;        
+}
+</code></pre><p>而如果想自己定义valve，也可以在server.xml中定义。</p>
+<p>因此我们基本肯定tomcat容器部分的处理是通过pipline方式运行的，如果不是很确定，就可以到CoyoteAdapter.service(request,response)方法(这个方法是tomcat容器部分的开始)中查看,在tomcat7的408行我们会看到这么一句话</p>
+<pre><code><span class="tag">connector</span><span class="class">.getService</span>()<span class="class">.getContainer</span>()<span class="class">.getPipeline</span>()<span class="class">.getFirst</span>()<span class="class">.invoke</span>(<span class="tag">request</span>, <span class="tag">response</span>);
+</code></pre><ol>
+<li>connector.getService().getContainer()这里拿到的是最顶层的容器，即Engine对象</li>
+<li>getPipeline().getFirst() 拿到engine对象的pipline的第一个阀门</li>
+<li>invoke(request, response) 所有的valve都必须实现invoke方法，这里就开始执行了第一个管道的第一个阀门方法</li>
+</ol>
+<p>这样，pipline就开始工作了，由于上面提到过容器的几个组件都是父子关系，因此每个容器组件都可以拿到他的子容器组件，因此每当一个pipline中的valve都执行完，就会执行子pipline的valve动作。</p>
+<p>下面这幅图是我从imTiger网站扣的一张图，这张图已经足以说明tomcat pipline的处理流程。</p>
+<p><img src="http://www.getsetter.cn/img/tomcat_process.jpg" alt="tomcat_process.jpg"></p>
+<p>###comet的开始</p>
+<p>上文说到Wrapper组件其实代表了一个servlet。servlet的处理过程也是从这里开始，我们看一下StandardWrapperValve的这个类,这个类的功能是根据请求匹配对应的servlet,如果第一次请求就会反射创建一个实例并调用init方法，再看下面的代码：</p>
+<pre><code><span class="comment">// Identify if the request is Comet related now that the servlet has been allocated</span>
+<span class="keyword">boolean</span> comet = <span class="keyword">false</span>;
+<span class="keyword">if</span> (servlet <span class="keyword">instanceof</span> CometProcessor &amp;&amp;  == <span class="keyword">Boolean</span>.<span class="keyword">TRUE</span>) {
+    comet = <span class="keyword">true</span>;
+    request.setComet(<span class="keyword">true</span>);
+}
+</code></pre><ol>
+<li>开头的时候说过只有servlet实现了CometProcessor接口，tomcat才能实现comet功能。因此他这里判断了servlet是不是实现了CometProcessor接口，</li>
+<li><p>request.getAttribute(Globals.COMET_SUPPORTED_ATTR)，这个属性是在容器启动构造组件的时候设置的，默认情况下nio和apr的模式是true。因此comet必须要nio或者apr的支持，这个只需要把Connector标签的内容换成如下的配置即可</p>
+<pre><code><span class="tag">&lt;<span class="title">Connector</span> <span class="attribute">connectionTimeout</span>=<span class="value">"20000"</span> <span class="attribute">port</span>=<span class="value">"8080"</span> 
+   <span class="attribute">protocol</span>=<span class="value">"org.apache.coyote.http11.Http11NioProtocol"</span> <span class="attribute">redirectPort</span>=<span class="value">"8443"</span>/&gt;</span>
+</code></pre></li>
+</ol>
+<p>接着往下看：</p>
+<pre><code>try {
+    <span class="keyword">if</span> <span class="params">(<span class="params">(servlet != null)</span> &amp;&amp; <span class="params">(filterChain != null)</span>)</span> {
+        <span class="comment">// Swallow output if needed</span>
+        <span class="keyword">if</span> <span class="params">(context.getSwallowOutput<span class="params">()</span>)</span> {
+            try {
+                SystemLogHandler.startCapture<span class="params">()</span>;
+                <span class="keyword">if</span> <span class="params">(request.isAsyncDispatching<span class="params">()</span>)</span> {
+                    <span class="comment">//TODO SERVLET3 - async</span>
+                    <span class="params">(<span class="params">(AsyncContextImpl)</span>request.getAsyncContext<span class="params">()</span>)</span>.doInternalDispatch<span class="params">()</span>; 
+                } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(comet)</span> {
+                    filterChain.doFilterEvent<span class="params">(request.getEvent<span class="params">()</span>)</span>;
+                    request.setComet<span class="params">(<span class="literal">true</span>)</span>;
+                } <span class="keyword">else</span> {
+                    filterChain.doFilter<span class="params">(request.getRequest<span class="params">()</span>, 
+                            response.getResponse<span class="params">()</span>)</span>;
+                }
+            } finally {
+                String <span class="built_in">log</span> = SystemLogHandler.stopCapture<span class="params">()</span>;
+                <span class="keyword">if</span> <span class="params">(log != null &amp;&amp; log.length<span class="params">()</span> &gt; <span class="number">0</span>)</span> {
+                    context.getLogger<span class="params">()</span>.info<span class="params">(log)</span>;
+                }
+            }
+        } <span class="keyword">else</span> {
+            <span class="keyword">if</span> <span class="params">(request.isAsyncDispatching<span class="params">()</span>)</span> {
+                <span class="comment">//TODO SERVLET3 - async</span>
+                <span class="params">(<span class="params">(AsyncContextImpl)</span>request.getAsyncContext<span class="params">()</span>)</span>.doInternalDispatch<span class="params">()</span>;
+            } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(comet)</span> {
+                request.setComet<span class="params">(<span class="literal">true</span>)</span>;
+                filterChain.doFilterEvent<span class="params">(request.getEvent<span class="params">()</span>)</span>;
+            } <span class="keyword">else</span> {
+                filterChain.doFilter
+                    <span class="params">(request.getRequest<span class="params">()</span>, response.getResponse<span class="params">()</span>)</span>;
+            }
+        }
+
+    }
+</code></pre><ol>
+<li>非comet，这里会调用doFilter方法，方法会依次执行web.xml中的filter，最后执行servlet。</li>
+<li><p>comet的情况会调用doFilterEvent方法。该方法会先执行所有实现了filterComet接口的类(当然上面没提这个接口，这是为filter提供的comet实现)，这个方法最终会调用ApplicationFilterChain的internalDoFilterEvent()方法，看这个方法的关键代码：</p>
+<pre><code><span class="keyword">if</span><span class="params">( Globals.IS_SECURITY_ENABLED )</span> {
+        final CometEvent ev = event;
+        Principal principal = 
+            ev.getHttpServletRequest<span class="params">()</span>.getUserPrincipal<span class="params">()</span>;
+        Object[] args = new Object[]{ ev };
+        SecurityUtil.doAsPrivilege<span class="params">(<span class="string">"event"</span>,
+                servlet,
+                classTypeUsedInEvent, 
+                args,
+                principal)</span>;
+    } <span class="keyword">else</span> {  
+        <span class="params">(<span class="params">(CometProcessor)</span> servlet)</span>.event<span class="params">(event)</span>;
+    }
+</code></pre><ol>
+<li>这里最终会调用到cometProcessor的event方法，如果是第一次请求,参数CometEvent的事件类型会是BEGIN的状态。</li>
+</ol>
+</li>
+</ol>
+<p>###流程还没有完</p>
+<p>上面的方法是完成了一个连接的建立，并已经成功调用到了我们自己编写的event方法里，但是上面的只是一个连接创建的事件，那数据的读取事件什么时候发生。莫急，一般第一次请求过来都会带有一个消息过来，只是tomcat按照事件的先后顺序先执行了连接创建的事件。接着到CoyoteAdapter.service()方法里看后面的流程：</p>
+<pre><code><span class="keyword">if</span> <span class="params">(event<span class="params">(req, res, SocketStatus.OPEN)</span>)</span> {
+    comet = <span class="literal">true</span>;
+    res.action<span class="params">(ActionCode.COMET_BEGIN, null)</span>;
+}
+</code></pre><ol>
+<li>这里会调到event方法，并传入了一个Socket打开的状态。</li>
+<li><p>看一下event方法</p>
+<pre><code><span class="keyword">if</span> <span class="params">(status == SocketStatus.OPEN)</span> {
+      <span class="keyword">if</span> <span class="params">(response.isClosed<span class="params">()</span>)</span> {
+          <span class="comment">// The event has been closed asynchronously, so call end instead of</span>
+          <span class="comment">// read to cleanup the pipeline</span>
+          request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.END)</span>;
+          request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(null)</span>;
+      } <span class="keyword">else</span> {
+          try {
+              <span class="comment">// Fill the read buffer of the servlet layer\</span>
+              <span class="comment">// @1</span>
+              <span class="keyword">if</span> <span class="params">(request.read<span class="params">()</span>)</span> {
+                  read = <span class="literal">true</span>;
+              }
+          } catch <span class="params">(IOException e)</span> {
+              error = <span class="literal">true</span>;
+          }
+          <span class="keyword">if</span> <span class="params">(read)</span> {
+              request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.READ)</span>;
+              request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(null)</span>;
+          } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(error)</span> {
+              request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.ERROR)</span>;
+              request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(CometEvent.EventSubType.CLIENT_DISCONNECT)</span>;
+          } <span class="keyword">else</span> {
+              request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.END)</span>;
+              request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(null)</span>;
+          }
+      }
+  } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(status == SocketStatus.DISCONNECT)</span> {
+      request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.ERROR)</span>;
+      request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(CometEvent.EventSubType.CLIENT_DISCONNECT)</span>;
+      error = <span class="literal">true</span>;
+  } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(status == SocketStatus.ERROR)</span> {
+      request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.ERROR)</span>;
+      request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(CometEvent.EventSubType.IOEXCEPTION)</span>;
+      error = <span class="literal">true</span>;
+  } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(status == SocketStatus.STOP)</span> {
+      request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.END)</span>;
+      request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(CometEvent.EventSubType.SERVER_SHUTDOWN)</span>;
+  } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(status == SocketStatus.TIMEOUT)</span> {
+      <span class="keyword">if</span> <span class="params">(response.isClosed<span class="params">()</span>)</span> {
+          <span class="comment">// The event has been closed asynchronously, so call end instead of</span>
+          <span class="comment">// read to cleanup the pipeline</span>
+          request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.END)</span>;
+          request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(null)</span>;
+      } <span class="keyword">else</span> {
+          request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.ERROR)</span>;
+          request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(CometEvent.EventSubType.TIMEOUT)</span>;
+      }
+  }
+
+  req.getRequestProcessor<span class="params">()</span>.setWorkerThreadName<span class="params">(Thread.currentThread<span class="params">()</span>.getName<span class="params">()</span>)</span>;
+
+  <span class="comment">// Calling the container</span>
+  <span class="comment">// @2</span>
+  connector.getService<span class="params">()</span>.getContainer<span class="params">()</span>.getPipeline<span class="params">()</span>.getFirst<span class="params">()</span>.event<span class="params">(request, response, request.getEvent<span class="params">()</span>)</span>;
+
+  <span class="keyword">if</span> <span class="params">(!error &amp;&amp; !response.isClosed<span class="params">()</span> &amp;&amp; <span class="params">(request.getAttribute<span class="params">(
+          RequestDispatcher.ERROR_EXCEPTION)</span> != null)</span>)</span> {
+      <span class="comment">// An unexpected exception occurred while processing the event, so</span>
+      <span class="comment">// error should be called</span>
+      request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.ERROR)</span>;
+      request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(null)</span>;
+      error = <span class="literal">true</span>;
+      connector.getService<span class="params">()</span>.getContainer<span class="params">()</span>.getPipeline<span class="params">()</span>.getFirst<span class="params">()</span>.event<span class="params">(request, response, request.getEvent<span class="params">()</span>)</span>;
+  }
+  <span class="keyword">if</span> <span class="params">(response.isClosed<span class="params">()</span> || !request.isComet<span class="params">()</span>)</span> {
+      <span class="keyword">if</span> <span class="params">(status==SocketStatus.OPEN &amp;&amp;
+              request.getEvent<span class="params">()</span>.getEventType<span class="params">()</span> != EventType.END)</span> {
+          <span class="comment">//CometEvent.close was called during an event other than END</span>
+          request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.END)</span>;
+          request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(null)</span>;
+          error = <span class="literal">true</span>;
+          connector.getService<span class="params">()</span>.getContainer<span class="params">()</span>.getPipeline<span class="params">()</span>.getFirst<span class="params">()</span>.event<span class="params">(request, response, request.getEvent<span class="params">()</span>)</span>;
+      }
+      res.action<span class="params">(ActionCode.COMET_END, null)</span>;
+  } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(!error &amp;&amp; read &amp;&amp; request.getAvailable<span class="params">()</span>)</span> {
+      <span class="comment">// If this was a read and not all bytes have been read, or if no data</span>
+      <span class="comment">// was read from the connector, then it is an error</span>
+      request.getEvent<span class="params">()</span>.setEventType<span class="params">(CometEvent.EventType.ERROR)</span>;
+      request.getEvent<span class="params">()</span>.setEventSubType<span class="params">(CometEvent.EventSubType.IOEXCEPTION)</span>;
+      error = <span class="literal">true</span>;
+      connector.getService<span class="params">()</span>.getContainer<span class="params">()</span>.getPipeline<span class="params">()</span>.getFirst<span class="params">()</span>.event<span class="params">(request, response, request.getEvent<span class="params">()</span>)</span>;
+  }
+  return <span class="params">(!error)</span>;
+</code></pre><ol>
+<li>标注@1的代码会去读请求的内容 看一下是否有数据。如果有，就把事件设置为READ事件，其他的几个条件大家可以自己试着理解。</li>
+<li>标注@2的代码看到了和之前adapt中调用pipline中类似的语句，之前是调用的invoke，现在是event()方法。先不看里面的逻辑，这个方法是干嘛用的？既然已经有READ()事件了，那怎么把这个事件发送给servlet呢。这里的event()就是干的这个事。里面的实现和上个章节介绍的差不多。</li>
+</ol>
+</li>
+</ol>
+<p>所有valve的基类ValveBase有2个最基本的抽象方法：</p>
+<ul>
+<li>invoke(Request request, Response response)：处理非comet的请求和第一次comet的BEGIN的事件</li>
+<li>event(Request request,Response response,CometEvent event)：处理所有comet请求的事件。</li>
+</ul>
+<p>###tomcat提供的例子<br>        @Override<br>        public void event(CometEvent event) throws IOException,<br>                ServletException {</p>
+<pre><code>        HttpServletRequest request = event.getHttpServletRequest<span class="params">()</span>;
+        HttpServletResponse response = event.getHttpServletResponse<span class="params">()</span>;
+
+        HttpSession session = request.getSession<span class="params">(<span class="literal">true</span>)</span>;
+        session.setMaxInactiveInterval<span class="params">(<span class="number">30</span>)</span>;
+
+        lastEvent = event.getEventType<span class="params">()</span>;
+
+        <span class="keyword">if</span> <span class="params">(event.getEventType<span class="params">()</span> == EventType.BEGIN)</span> {
+            <span class="keyword">if</span> <span class="params">(failOnBegin)</span> {
+                throw new IOException<span class="params">(<span class="string">"Fail on begin"</span>)</span>;
+            }
+            response.setContentType<span class="params">(<span class="string">"text/plain"</span>)</span>;
+            response.getWriter<span class="params">()</span>.print<span class="params">(<span class="string">"BEGIN"</span> + <span class="string">"\r\n"</span>)</span>;
+        } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(event.getEventType<span class="params">()</span> == EventType.READ)</span> {
+            <span class="keyword">if</span> <span class="params">(failOnRead)</span> {
+                throw new IOException<span class="params">(<span class="string">"Fail on read"</span>)</span>;
+            }
+            InputStream is = request.getInputStream<span class="params">()</span>;
+            int count = <span class="number">0</span>;
+            while <span class="params">(is.available<span class="params">()</span> &gt; <span class="number">0</span>)</span> {
+                is.read<span class="params">()</span>;
+                count ++;
+            }
+            String msg = <span class="string">"READ: "</span> + count + <span class="string">" bytes"</span>;
+            response.getWriter<span class="params">()</span>.print<span class="params">(<span class="string">"Client: "</span> + msg + <span class="string">"\r\n"</span>)</span>;
+        } <span class="keyword">else</span> <span class="keyword">if</span> <span class="params">(event.getEventType<span class="params">()</span> == EventType.END)</span> {
+            endEventOccurred = <span class="literal">true</span>;
+            <span class="keyword">if</span> <span class="params">(failOnEnd)</span> {
+                throw new IOException<span class="params">(<span class="string">"Fail on end"</span>)</span>;
+            }
+            String msg = <span class="string">"END"</span>;
+            response.getWriter<span class="params">()</span>.print<span class="params">(<span class="string">"Client: "</span> + msg + <span class="string">"\r\n"</span>)</span>;
+            event.close<span class="params">()</span>;
+        } <span class="keyword">else</span> {
+            response.getWriter<span class="params">()</span>.print<span class="params">(event.getEventSubType<span class="params">()</span> + <span class="string">"\r\n"</span>)</span>;
+            event.close<span class="params">()</span>;
+        }
+        response.getWriter<span class="params">()</span>.flush<span class="params">()</span>;
+    }
+}
+</code></pre><p>###总结</p>
+<p>上面介绍的方式只适合基于tomcat容器的应用，其他容器的comet实现请参考其他文档。如果你不希望编写一个基于某个容器的实现的解决方案，那有个利好的消息是servlet3.0将会推出一个规范来支持基于事件的NIO，然后由不同的容器自己去实现，这个就好比servlet标准一样，有了标准我们就不需要关注具体的实现，关于servlet3.0的处理请参考<a href="http://www.ibm.com/developerworks/cn/java/j-lo-comet/" target="_blank" rel="external">这里</a></p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2014/07/18/tomcat_comet/" data-id="cid748ogn0004gixefbfosr1p" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2014/07/22/tomcat_http_parse/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          tomcat之http解析和keepalive(bio篇)
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2014/07/15/netty5/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">netty5 用户指南</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  
+    
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/08/">August 2014</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/07/">July 2014</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/06/">June 2014</a><span class="archive-list-count">2</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recents</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2015/08/11/hello-world/">Hello World</a>
+          </li>
+        
+          <li>
+            <a href="/2014/08/01/share_ali_tec_metting/">参加阿里巴巴2015阿里系统技术峰会的感受</a>
+          </li>
+        
+          <li>
+            <a href="/2014/08/01/servlet_init/">tomcat初始化servlet代码剖析</a>
+          </li>
+        
+          <li>
+            <a href="/2014/07/22/tomcat_http_parse/">tomcat之http解析和keepalive(bio篇)</a>
+          </li>
+        
+          <li>
+            <a href="/2014/07/18/tomcat_comet/">tomcat comet的处理过程</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2015 John Doe<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css" type="text/css">
+  <script src="/fancybox/jquery.fancybox.pack.js" type="text/javascript"></script>
+
+
+<script src="/js/script.js" type="text/javascript"></script>
+
+  </div>
+</body>
+</html>
