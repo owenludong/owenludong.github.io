@@ -8,7 +8,7 @@
   <meta name="description" content="#前言#comet是一种服务端反推消息给客户端的一种技术，比如聊天室、电子邮件的场景。在comet出现之前有很多方案，更早之前想实现数据的不断更新，就要不断的通过js来不断地重新装载页面来获取新数据，后来AJAX的出现，可以实现局部刷新的功能,但是AJAX的方式也有局限性，因为他必须通过轮询来调后台接口，这样轮询的周期怎么来把控，如果设置地太长，获取的信息可能有滞后；如果设置地太短，客户端和服务端">
 <meta property="og:type" content="article">
 <meta property="og:title" content="tomcat comet的处理过程">
-<meta property="og:url" content="http://yoursite.com/2014/07/18/tomcat_comet/index.html">
+<meta property="og:url" content="www.getsetter.cn/2014/07/18/tomcat_comet/index.html">
 <meta property="og:site_name" content="from a get set world">
 <meta property="og:description" content="#前言#comet是一种服务端反推消息给客户端的一种技术，比如聊天室、电子邮件的场景。在comet出现之前有很多方案，更早之前想实现数据的不断更新，就要不断的通过js来不断地重新装载页面来获取新数据，后来AJAX的出现，可以实现局部刷新的功能,但是AJAX的方式也有局限性，因为他必须通过轮询来调后台接口，这样轮询的周期怎么来把控，如果设置地太长，获取的信息可能有滞后；如果设置地太短，客户端和服务端">
 <meta property="og:image" content="http://www.getsetter.cn/img/comet_class.jpg">
@@ -52,7 +52,7 @@
         </nav>
       
       <div id="search-form-wrap">
-        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit"> </button><input type="hidden" name="sitesearch" value="http://yoursite.com"></form>
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit"> </button><input type="hidden" name="sitesearch" value="www.getsetter.cn"></form>
       </div>
     </div>
   </div>
@@ -67,7 +67,7 @@
           <td><a class="main-nav-link" href="/about">About</a></td>
         
         <td>
-          <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><input type="hidden" name="sitesearch" value="http://yoursite.com"></form>
+          <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><input type="hidden" name="sitesearch" value="www.getsetter.cn"></form>
         </td>
       </tr>
     </table>
@@ -161,7 +161,7 @@
 <li>用户需要根据这4种不同的类型做不同的业务逻辑处理，所有event可能会有大量的if else语句。</li>
 </ol>
 <p>###回顾tomcat处理的流程<br>从tomcat的功能划分可以把tomcat分为连接器和容器2部分，这里不做过多分析，只说一个大概的流程：从客户端一个http请求开始，客户端会把消息发送到Connector监听的socket端口上，tomcat自己实现了一个http协议栈用来解析http消息(这里也可以单独写一篇文章)，解析出来的数据会封装成tomcat内部的request和response对象,从解析出来的request数据中提取engine、host、context、wrapper等信息，最终通过pipline模式找到对应的servlet(在tomcat内部一个wrapper对象就是对应了一个servlet运行信息)，调用service()方法完成一次请求。</p>
-<p>先暂时忽略Connector的处理部分，这里重点关注下从拿到tomcat解析完数据并生成tomcat内部的request后开始。<br>tomcat拿到请求数据后，会交给tomcat的容器部分，tomcat的容器会由4个组件构成，Engine、Host、Context和Wrapper,组件的具体含义请参考我之前写过的一篇<a href="http://www.getsetter.cn/2014/06/25/tomcat-component/" target="_blank" rel="external">tomcat组件</a>。这4个组件其实并不是平行的，而是父子关系，这几个对象最终都会继承自Container对象，每一个Container对象都会有一个pipline，pipline我们太熟悉了，那valve在哪里定义，每一个容器默认都会在构造函数里都会自带一个valve,比如wrapper构造函数的定义是下面代码所示：</p>
+<p>先暂时忽略Connector的处理部分，这里重点关注下从拿到tomcat解析完数据并生成tomcat内部的request后开始。<br>tomcat拿到请求数据后，会交给tomcat的容器部分，tomcat的容器会由4个组件构成，Engine、Host、Context和Wrapper,组件的具体含义请参考我之前写过的一篇<a href="http://www.getsetter.cn/2014/06/25/tomcat-component/">tomcat组件</a>。这4个组件其实并不是平行的，而是父子关系，这几个对象最终都会继承自Container对象，每一个Container对象都会有一个pipline，pipline我们太熟悉了，那valve在哪里定义，每一个容器默认都会在构造函数里都会自带一个valve,比如wrapper构造函数的定义是下面代码所示：</p>
 <pre><code> public <span class="type">StandardWrapper</span><span class="literal">()</span> {        
          super<span class="literal">()</span>;
          swValve=<span class="keyword">new</span> <span class="type">StandardWrapperValve</span><span class="literal">()</span>;
@@ -404,9 +404,9 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://yoursite.com/2014/07/18/tomcat_comet/" data-id="cid7cw9ez0003tqxefy8knft4" class="article-share-link">Share</a>
+      <a data-url="www.getsetter.cn/2014/07/18/tomcat_comet/" data-id="cid7di5o20003uixe7f2iskvp" class="article-share-link">Share</a>
       
-        <a href="http://yoursite.com/2014/07/18/tomcat_comet/#ds-thread" class="article-comment-link">Comments</a>
+        <a href="www.getsetter.cn/2014/07/18/tomcat_comet/#ds-thread" class="article-comment-link">Comments</a>
       
       
     </footer>
@@ -438,7 +438,7 @@
 
   <section id="comments">
      <!-- 多说评论框 start -->
-    <div class="ds-thread" data-thread-key="post-tomcat_comet" data-title="tomcat comet的处理过程" data-url="http://yoursite.com/2014/07/18/tomcat_comet/"></div>
+    <div class="ds-thread" data-thread-key="post-tomcat_comet" data-title="tomcat comet的处理过程" data-url="www.getsetter.cn/2014/07/18/tomcat_comet/"></div>
     <!-- 多说评论框 end -->
     <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
     <script type="text/javascript">
@@ -582,7 +582,6 @@
   <div class="outer">
     <div id="footer-info" class="inner">
       &copy; 2000 - 2015 家栋<br>
-      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme by <a href="http://github.com/ppoffice">PPOffice</a>
     </div>
   </div>
 </footer>
