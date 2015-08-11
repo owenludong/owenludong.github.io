@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Archives: 2014 | from a get set world</title>
+  <title>from a get set world</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="description" content="Hexo theme - Icarus">
 <meta property="og:type" content="website">
 <meta property="og:title" content="from a get set world">
-<meta property="og:url" content="http://ppoffice.github.io/hexo-theme-icarus/archives/2014/index.html">
+<meta property="og:url" content="http://ppoffice.github.io/hexo-theme-icarus/page/2/index.html">
 <meta property="og:site_name" content="from a get set world">
 <meta property="og:description" content="Hexo theme - Icarus">
 <meta name="twitter:card" content="summary">
@@ -125,224 +125,66 @@
 
       
       <section id="main">
-      <div class="archive-year-wrap">
-        <a href="/archives/2014" class="archive-year">2014</a>
-      </div>
-      <section class="archives-wrap">
-        <div class="archives">
+      <article id="post-tomcat-begin" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-inner">
     
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
     
-    <div class="archive-article-thumbnail">
-      <a href="/2014/08/01/share_ali_tec_metting/" class="thumbnail">
-  
-    <span class="thumbnail-image thumbnail-none"></span>
-  
-</a>
-    </div>
     
-    <header class="archive-article-header">
-      
+      <header class="article-header">
+        
   
     <h1 itemprop="name">
-      <a class="archive-article-title" href="/2014/08/01/share_ali_tec_metting/">参加阿里巴巴2015阿里系统技术峰会的感受</a>
+      <a class="article-title" href="/2014/06/05/tomcat-begin/">Tomcat理性认识篇</a>
     </h1>
   
 
-      
-        
-  <div class="archive-article-date">
+        <div class="article-meta">
+          
+  <div class="article-date">
     <i class="fa fa-calendar"></i>
-    <a href="/2014/08/01/share_ali_tec_metting/">
-      <time datetime="2014-08-01T15:25:17.000Z" itemprop="datePublished">Aug 1</time>
+    <a href="/2014/06/05/tomcat-begin/">
+      <time datetime="2014-06-04T16:00:00.000Z" itemprop="datePublished">2014-06-05</time>
     </a>
   </div>
 
 
-      
-    </header>
-  </div>
-</article>
-  
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
+          
+        </div>
+      </header>
     
-    <div class="archive-article-thumbnail">
-      <a href="/2014/08/01/servlet_init/" class="thumbnail">
-  
-    <span class="thumbnail-image thumbnail-none"></span>
-  
-</a>
+    <div class="article-entry" itemprop="articleBody">
+      
+                
+        <p>在GreenTea JUG的一次线下分享聚会上，听了王宏江分享的关于tomcat的原理和淘宝的tomcat定制的话题，对tomcat的实现产生了浓厚的兴趣。<br>现在整个国内估计也就阿里巴巴有这个实力和需求需要对容器做定制，原因是阿里巴巴有全亚洲(硅谷那边不清楚)最多的Java从业者和系统。由于tomcat是基于号称对商业最友好的<a href="http://www.apache.org/licenses" target="_blank" rel="external">Apache license 2.0</a>的协议，所以在必要的时候做二次修改并可以商用或者free。</p>
+<h2 id="认识">认识</h2><h3 id="Tomcat的历史">Tomcat的历史</h3><p>tomcat的代码构建工具用的是ant，非常不习惯，查了一下原因得知原来ant早期是Tomcat的一部分，后台才独立出去，而ant的创始人恰恰也是tomcat的创始人James Duncan Davidson。<br>另外tomcat里面其实用到了很多的设计模式，其中tomcat的请求处理流程是通过责任链模式(pipline)一步步组装起来，而熟悉webx的人也知道pipline是webx的核心设计模式，而webx又是基于apache Turbine做的改造，从宏江那边得知Turbine的创始人也是tomcat的开发人员，渊源真深啊。</p>
+<h3 id="代码迁出">代码迁出</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/apache/tomcat.git&#10;``` &#10;&#10; &#25110;&#32773;</span><br></pre></td></tr></table></figure>
+<p>svn co <a href="http://svn.apache.org/repos/asf/tomcat/tc7.0.x/trunk/" target="_blank" rel="external">http://svn.apache.org/repos/asf/tomcat/tc7.0.x/trunk/</a><br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#10;&#25110;&#32773;(&#35874;&#35874;&#32593;&#21517;imtiger&#30340;&#20804;&#24351;&#25645;&#24314;&#30340;&#22522;&#20110;tomcat7.0.42&#25645;&#24314;&#30340;maven&#32467;&#26500;)&#65306;</span><br></pre></td></tr></table></figure></p>
+<p>git clone <a href="https://github.com/imtiger/Tomcat.git" target="_blank" rel="external">https://github.com/imtiger/Tomcat.git</a><br>```</p>
+<h3 id="读前准备">读前准备</h3><ul>
+<li>了解jdk classloader原理、责任链设计模式和模板模式</li>
+<li>了解<a href="http://www.ibm.com/developerworks/cn/xml/dm-1208gub/" target="_blank" rel="external">Digester</a></li>
+<li>了解线程池技术、socket通信机制</li>
+<li>了解LinkedBlockingQueue队列和ThreadPoolExecutor的用法</li>
+<li>如果熟悉shell或者bat语法的最好去读一下启动脚本里面的内容  【可选】</li>
+</ul>
+<p><em>下一节：TOMCAT的组件</em></p>
+
+      
     </div>
-    
-    <header class="archive-article-header">
+    <footer class="article-footer">
+      <a data-url="http://ppoffice.github.io/hexo-theme-icarus/2014/06/05/tomcat-begin/" data-id="cid74sof60006iexevzef8i2n" class="article-share-link">Share</a>
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2014/08/01/servlet_init/">tomcat初始化servlet代码剖析</a>
-    </h1>
-  
-
       
-        
-  <div class="archive-article-date">
-    <i class="fa fa-calendar"></i>
-    <a href="/2014/08/01/servlet_init/">
-      <time datetime="2014-08-01T15:25:17.000Z" itemprop="datePublished">Aug 1</time>
-    </a>
+    </footer>
   </div>
-
-
-      
-    </header>
-  </div>
+  
 </article>
-  
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
+
+
+
     
-    <div class="archive-article-thumbnail">
-      <a href="/2014/07/22/tomcat_http_parse/" class="thumbnail">
-  
-    <span style="background-image:url(http://www.getsetter.cn/img/tomcat_connector.jpg
-)" alt="tomcat之http解析和keepalive(bio篇)" class="thumbnail-image"></span>
-  
-</a>
-    </div>
-    
-    <header class="archive-article-header">
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2014/07/22/tomcat_http_parse/">tomcat之http解析和keepalive(bio篇)</a>
-    </h1>
-  
-
-      
-        
-  <div class="archive-article-date">
-    <i class="fa fa-calendar"></i>
-    <a href="/2014/07/22/tomcat_http_parse/">
-      <time datetime="2014-07-22T15:18:42.000Z" itemprop="datePublished">Jul 22</time>
-    </a>
-  </div>
-
-
-      
-    </header>
-  </div>
-</article>
-  
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    
-    <div class="archive-article-thumbnail">
-      <a href="/2014/07/18/tomcat_comet/" class="thumbnail">
-  
-    <span style="background-image:url(http://www.getsetter.cn/img/comet_class.jpg
-)" alt="tomcat comet的处理过程" class="thumbnail-image"></span>
-  
-</a>
-    </div>
-    
-    <header class="archive-article-header">
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2014/07/18/tomcat_comet/">tomcat comet的处理过程</a>
-    </h1>
-  
-
-      
-        
-  <div class="archive-article-date">
-    <i class="fa fa-calendar"></i>
-    <a href="/2014/07/18/tomcat_comet/">
-      <time datetime="2014-07-18T14:59:03.000Z" itemprop="datePublished">Jul 18</time>
-    </a>
-  </div>
-
-
-      
-    </header>
-  </div>
-</article>
-  
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    
-    <div class="archive-article-thumbnail">
-      <a href="/2014/07/15/netty5/" class="thumbnail">
-  
-    <span style="background-image:url(http://www.getsetter.cn/img/netty5_1.png
-)" alt="netty5 用户指南" class="thumbnail-image"></span>
-  
-</a>
-    </div>
-    
-    <header class="archive-article-header">
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2014/07/15/netty5/">netty5 用户指南</a>
-    </h1>
-  
-
-      
-        
-  <div class="archive-article-date">
-    <i class="fa fa-calendar"></i>
-    <a href="/2014/07/15/netty5/">
-      <time datetime="2014-07-15T11:17:03.000Z" itemprop="datePublished">Jul 15</time>
-    </a>
-  </div>
-
-
-      
-    </header>
-  </div>
-</article>
-  
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    
-    <div class="archive-article-thumbnail">
-      <a href="/2014/06/25/tomcat-component/" class="thumbnail">
-  
-    <span style="background-image:url(http://www.getsetter.cn/img/tomcat_componet.jpg
-)" alt="tomcat组件" class="thumbnail-image"></span>
-  
-</a>
-    </div>
-    
-    <header class="archive-article-header">
-      
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2014/06/25/tomcat-component/">tomcat组件</a>
-    </h1>
-  
-
-      
-        
-  <div class="archive-article-date">
-    <i class="fa fa-calendar"></i>
-    <a href="/2014/06/25/tomcat-component/">
-      <time datetime="2014-06-25T02:00:00.000Z" itemprop="datePublished">Jun 25</time>
-    </a>
-  </div>
-
-
-      
-    </header>
-  </div>
-</article>
-  
-    </div></section>
-  
       <nav id="page-nav">
-        <span class="page-number current">1</span><a class="page-number" href="/archives/2014/page/2/">2</a><a class="extend next" rel="next" href="/archives/2014/page/2/">Next &raquo;</a>
+        <a class="extend prev" rel="prev" href="/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
       </nav>
     </section>
       
